@@ -33,7 +33,7 @@ ipython kernel install --user --name=name_of_env
 ---
 
 ### First steps into the Exposurome world
-Please download all files from our zenodo [repository](insertlinkhere) and deposit them into your directory of notebooks
+Please download all files from our zenodo [repository](https://zenodo.org/records/10829457) and deposit them into your directory of notebooks
 
 ```
 The zip file has the following folders
