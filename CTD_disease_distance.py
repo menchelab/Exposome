@@ -4,21 +4,7 @@ import numpy as np
 import networkx as nx
 import itertools as it
 import random as rd
-import colorsys
-import umap
-import pickle as pk
-import pymysql as mysql
-from scipy.interpolate import interpn
-from scipy.stats import gaussian_kde
-from prettytable import PrettyTable
-#from fisher import pvalue
 import scipy.stats as st
-import scipy.cluster.hierarchy as sch
-import scipy.spatial.distance as dist
-from sklearn.preprocessing import normalize
-from scipy.cluster.hierarchy import fcluster
-from sklearn import (manifold, datasets, decomposition, ensemble,
-                     discriminant_analysis, random_projection,cluster)
 import os.path
 import pandas as pd
 from collections import (defaultdict,Counter)
