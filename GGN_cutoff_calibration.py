@@ -63,6 +63,14 @@ def disparity_filter(G, weight='weight'):
                     B.add_edge(u, v, weight = w, alpha=float('%.4f' % alpha_ij))
         return B
 
+
+def overlap_jaccard(list1,list2):
+    intersction_term= len(set(list1) & set(list2))
+    denominator = len(set(list1).union(set(list2)))
+    overlap_jaccard_coeff = intersction_term/denominator
+    return overlap_jaccard_coeff
+
+
 #Let's import the chemical-gene interactions from CTD (downloaded on 5th April 2021)
 chem_gene_df = pd.read_csv("input/CTD/CTD_chem_gene_ixns.tsv",delimiter= '\t', skipinitialspace=True)
 #Here, we filter for only the interactions that regards the H. Sapiens
@@ -92,11 +100,17 @@ gene_chem_cleaned = {k: gene_chem_cleaned[k] for k in gene_chem_cleaned if type(
 with open('intermediate/gene_graph_fisher.pickle', 'rb') as handle:
     gene_graph_fisher = pk.load(handle)
 
-def overlap_jaccard(list1,list2):
-    intersction_term= len(set(list1) & set(list2))
-    denominator = len(set(list1).union(set(list2)))
-    overlap_jaccard_coeff = intersction_term/denominator
-    return overlap_jaccard_coeff
+unfiltered_weighted_gene_graph_significant = nx.Graph()
+unfiltered_weighted_gene_graph_fisher_dict = {}
+for i,pval in gene_graph_fisher.items():
+    ji = overlap_jaccard(gene_chem_cleaned[i[0]],gene_chem_cleaned[i[1]])
+    if ji>0:
+        unfiltered_weighted_gene_graph_significant.add_edge(*i)
+        unfiltered_weighted_gene_graph_significant[i[0]][i[1]]['weight']=ji
+        unfiltered_weighted_gene_graph_fisher_dict[i]=pval
+
+nx.write_weighted_edgelist(unfiltered_weighted_gene_graph_significant, "output/unfiltered_weighted_gene_graph_significant.edgelist")
+
 
 #I want to check here how it will changes the number of nodes and the number of edges, changing the threshold
 #This function allows us to correct for multiple hypothesis
@@ -107,8 +121,8 @@ def fdr_adjustment(list_of_pvals):
 
 fdr_threshold=[0.05,0.01,0.001,0.0001,0.00001]   #different alpha threshold
 alpha_backbone_threshold=[0.99,0.95,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.09,0.08,0.07,0.06,0.05,0.01]   #different alpha threshold
-gene_keys_list=list(gene_graph_fisher.keys())
-gene_pvalues_list=list(gene_graph_fisher.values())
+gene_keys_list=list(unfiltered_weighted_gene_graph_fisher_dict.keys())
+gene_pvalues_list=list(unfiltered_weighted_gene_graph_fisher_dict.values())
 adj_pvals=fdr_adjustment(gene_pvalues_list)
 gene_graph_fisher_adjusted={} #here we obtain a dictionary of pairs with adjusted p-values
 for el in range(len(gene_keys_list)):
@@ -116,17 +130,11 @@ for el in range(len(gene_keys_list)):
 comb_threshold_dict_nodes={}
 comb_threshold_dict_edges={}
 for alpha_t in fdr_threshold:
-    gene_graph_ji_significant={}  #here, we select only the statistically significant
+    weighted_gene_graph_significant=nx.Graph()
     for gene_p,fdr in gene_graph_fisher_adjusted.items():
         if float(fdr)<alpha_t:
-            ji= overlap_jaccard(gene_chem_cleaned[gene_p[0]],gene_chem_cleaned[gene_p[1]])      #we are computing the odds ratio
-            gene_graph_ji_significant[gene_p]=ji                                                     #and used as an edge weight
-        else:
-            pass
-    weighted_gene_graph_significant=nx.Graph()
-    for gene_p,ji_score in gene_graph_ji_significant.items():
-        weighted_gene_graph_significant.add_edge(*gene_p)
-        weighted_gene_graph_significant[gene_p[0]][gene_p[1]]['weight']=ji_score
+            weighted_gene_graph_significant.add_edge(*gene_p)
+            weighted_gene_graph_significant[gene_p[0]][gene_p[1]]['weight']=unfiltered_weighted_gene_graph_significant[gene_p[0]][gene_p[1]]['weight']
     weighted_gene_graph_significant_dif = disparity_filter(weighted_gene_graph_significant)
     for alpha_b in alpha_backbone_threshold:
         backbone_gene_graph_significant = nx.Graph([(u, v, d) for u, v, d in weighted_gene_graph_significant_dif.edges(data=True) if d['alpha'] < alpha_b])   #let's apply the backboning threshold approach
@@ -134,7 +142,7 @@ for alpha_t in fdr_threshold:
         comb_threshold_dict_edges["fdr_"+str(alpha_t),"backbone_"+str(alpha_b)]=backbone_gene_graph_significant.number_of_edges()
 
 #Let's write the results in the intermidiate folder
-with open('intermediate/comb_threshold_dict_edges_GGN_ji.pickle', 'wb') as handle:
+with open('intermediate/post_rev_comb_threshold_dict_edges_GGN_ji.pickle', 'wb') as handle:
     pk.dump(comb_threshold_dict_edges, handle, protocol=pk.HIGHEST_PROTOCOL)
-with open('intermediate/comb_threshold_dict_nodes_GGN_ji.pickle', 'wb') as handle:
+with open('intermediate/post_rev_comb_threshold_dict_nodes_GGN_ji.pickle', 'wb') as handle:
     pk.dump(comb_threshold_dict_nodes, handle, protocol=pk.HIGHEST_PROTOCOL)

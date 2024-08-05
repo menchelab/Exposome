@@ -96,6 +96,15 @@ tot_gene=len(set(tot_gene_list))
 with open('intermediate/exposure_graph_fisher.pickle', 'rb') as handle:
     exposure_graph_fisher = pk.load(handle)
 
+unfiltered_weighted_exp_graph_significant=nx.Graph()
+for i in combination_list:
+    ji = overlap_jaccard(chem_gene_cleaned[i[0]],chem_gene_cleaned[i[1]])
+    if ji>0:
+        unfiltered_weighted_exp_graph_significant.add_edge(*i)
+        unfiltered_weighted_exp_graph_significant[i[0]][i[1]]['weight']=ji
+
+nx.write_weighted_edgelist(unfiltered_weighted_exp_graph_significant, "output/unfiltered_weighted_exp_graph_significant.edgelist")
+
 def overlap_jaccard(list1,list2):
     intersction_term= len(set(list1) & set(list2))
     denominator = len(set(list1).union(set(list2)))
@@ -111,8 +120,13 @@ def fdr_adjustment(list_of_pvals):
 
 fdr_threshold=[0.05,0.01,0.001,0.0001,0.00001]   #different alpha threshold
 alpha_backbone_threshold=[0.99,0.95,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.09,0.08,0.07,0.06,0.05,0.01]   #different alpha threshold
-exp_keys_list=list(exposure_graph_fisher.keys())
-exp_pvalues_list=list(exposure_graph_fisher.values())
+
+unfiltered_weighted_graph_fisher_dict = {}
+for e in unfiltered_weighted_exp_graph_significant.edges():
+    unfiltered_weighted_graph_fisher_dict[e]=exposure_graph_fisher[e]
+
+exp_keys_list=list(unfiltered_weighted_graph_fisher_dict.keys())
+exp_pvalues_list=list(unfiltered_weighted_graph_fisher_dict.values())
 adj_pvals=fdr_adjustment(exp_pvalues_list)
 exp_graph_fisher_adjusted={} #here we obtain a dictionary of pairs with adjusted p-values
 for el in range(len(exp_keys_list)):
@@ -138,7 +152,7 @@ for alpha_t in fdr_threshold:
         comb_threshold_dict_edges["fdr_"+str(alpha_t),"backbone_"+str(alpha_b)]=backbone_exp_graph_significant.number_of_edges()
 
 #Let's write the results in the intermidiate folder
-with open('intermediate/comb_threshold_dict_edges_EEN_ji.pickle', 'wb') as handle:
+with open('intermediate/post_rev_comb_threshold_dict_edges_EEN_ji.pickle', 'wb') as handle:
     pk.dump(comb_threshold_dict_edges, handle, protocol=pk.HIGHEST_PROTOCOL)
-with open('intermediate/comb_threshold_dict_nodes_EEN_ji.pickle', 'wb') as handle:
+with open('intermediate/post_rev_comb_threshold_dict_nodes_EEN_ji.pickle', 'wb') as handle:
     pk.dump(comb_threshold_dict_nodes, handle, protocol=pk.HIGHEST_PROTOCOL)
