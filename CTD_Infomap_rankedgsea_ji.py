@@ -11,8 +11,7 @@ chem_gene_df = pd.read_csv("input/CTD/CTD_chem_gene_ixns.tsv",delimiter= '\t', s
 chem_homo = chem_gene_df[(chem_gene_df['Organism'] == 'Homo sapiens')]
 
 #Let's import the network
-final_backbone_exp_graph_significant_combo_df = pd.read_csv("output/final_backbone_exp_graph_significant_combo_ji_df.tsv", sep="\t",index_col=0)
-backbone_ss_exposure_network = nx.from_pandas_edgelist(final_backbone_exp_graph_significant_combo_df, 'Exp A', 'Exp B')
+backbone_ss_exposure_network = nx.read_weighted_edgelist("output/backbone_exp_graph_significant_weighted.edgelist")
 
 #This cells create a dictionary where each key is a chemical compound and the correspondent value is a genelist
 chem_gene = {}
