@@ -44,7 +44,7 @@ The zip file has the following folders
 
 ---
 ### Exposome exploration
-You can navigate directly through to the chemical projection of the Exposome, the Exposure-Exposure Network (EEN), by clicking [here](http://lem.westeurope.cloudapp.azure.com:5000/preview#%5B%5D), or you can connect to the dedicated [webpage](https://menchelab.com/exposomeapp). The network exploration can be performed through the link in a desktop version, or in an immersive environment with a Virtual Reality (VR) headset.
+You can navigate directly through to the chemical projection of the Exposome, the Exposure-Exposure Network (EEN), by clicking [here](http://exposome.westeurope.cloudapp.azure.com:5000/preview), or you can connect to the dedicated [webpage](https://menchelab.com/exposomeapp). The network exploration can be performed through the link in a desktop version, or in an immersive environment with a Virtual Reality (VR) headset.
 
 
 ### SYSTEM REQUIREMENTS

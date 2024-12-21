@@ -9,16 +9,10 @@ import os.path
 import pandas as pd
 from collections import (defaultdict,Counter)
 import time
-# import statsmodels.sandbox.stats.multicomp as mc
 import matplotlib.pyplot as plt
-# %matplotlib inline
 import pickle as pk
 
-
-chem_vocabolary = pd.read_csv("CTD_chemicals_cleaned.txt",delimiter= '\t',
-           skipinitialspace=True)
-
-chem_gene_df = pd.read_csv("CTD_chem_gene_ixns.tsv",delimiter= '\t',
+chem_gene_df = pd.read_csv("input/CTD/CTD_chem_gene_ixns.tsv",delimiter= '\t',
             skipinitialspace=True)
 
 chem_homo = chem_gene_df[(chem_gene_df['Organism'] == 'Homo sapiens')]
@@ -41,35 +35,7 @@ for k,v in chem_gene.items():
     else:
         pass
 
-
-chem_voc_dict = {}
-for i,v in chem_vocabolary.iterrows():
-    try:
-        chem_voc_dict[v["ChemicalID"]] = v["ParentIDs"].split("|")
-    except:
-        chem_voc_dict[v["ChemicalID"]] = v["ParentIDs"]
-
-from collections.abc import Mapping
-# Empty directed graph
-G = nx.DiGraph()
-
-for k in chem_voc_dict.keys():
-    try:
-        for v in chem_voc_dict[k]:
-            G.add_edge(k, v)
-    except:
-        G.add_edge(k,"D")
-
-classes_list=[]
-for i in G.nodes():
-    if len(nx.predecessor(G, i))==2:
-        classes_list.append(i)
-
-#Let's clean the list from the nan elements
-classes_list_cleaned = [x for x in classes_list if str(x) != 'nan']
-
-
-ppi = pd.read_csv("julia_symbol_lcc.csv",delimiter= ',',
+ppi = pd.read_csv("input/PPI/autocore_symbol_lcc.csv",delimiter= ',',
            skipinitialspace=True)
 
 G_ppi = nx.from_pandas_edgelist(ppi, 'symbol1', 'symbol2')
@@ -93,7 +59,7 @@ for k,v in chem_gene_cleaned.items():
 
 
 #Loading the gene associations
-gene_associations = pd.read_csv("all_gene_disease_associations.tsv",
+gene_associations = pd.read_csv("input/Disease/all_gene_disease_associations.tsv",
            delimiter= '\t',
            skipinitialspace=True)
 
@@ -120,7 +86,7 @@ for k,v in diseases_genes_associated.items():
         pass
 
 #Let's import the spl dictionary
-with open('ppi_spl.pickle', 'rb') as handle:
+with open('intermediate/ppi_spl.pickle', 'rb') as handle:
     spl = pk.load(handle)
 
 def calculate_closest_distance(spl, nodes_from, nodes_to):
@@ -153,5 +119,5 @@ for exp in chem_gene_dictio_cleaned_ppi.keys():
         exp_dis_distance[exp,dis]=calculate_closest_distance(spl,exp_gene_list_cleaned,dis_gene_list_cleaned)
 
 
-with open('exp_disease_distance.pickle', 'wb') as handle:
+with open('intermediate/exp_disease_distance.pickle', 'wb') as handle:
     pk.dump(exp_dis_distance, handle, protocol=pk.HIGHEST_PROTOCOL)
