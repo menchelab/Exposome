@@ -1,0 +1,272 @@
+---
+title: "Reactome ORA"
+output: html_notebook
+---
+
+
+
+```{r}
+library(jsonlite)
+library(clusterProfiler)
+
+# Read the list from the text file
+GO_background <- readLines("input/Libraries/genetic_background.txt")
+
+# Read the JSON file into an R object
+first_louvain_cluster_genes <- fromJSON("output/Communities/Louvain/first_louvain_cluster_genes.json")
+
+# Initialize variables (ensure fg and bg are defined)
+bg <- GO_background  # Background gene list
+
+# Gene Ontology and minimum set size
+genesetlibrary <- "Reactome Pathways"
+minsetsize <- 5
+
+# Read the gs.Rds file
+gs <- readRDS("input/Libraries/gs.Rds")
+mygs <- gs[["Reactome Pathways"]]
+
+# Initialize an empty dictionary to store results
+first_louvain_ora_dict <- list()
+
+# Loop over each key in first_louvain_cluster_genes
+for (key in names(first_louvain_cluster_genes)) {
+  
+  # Get the gene list for the current key
+  fg <- first_louvain_cluster_genes[[key]]  # Foreground gene list
+  
+  # Prepare the gene set for enrichment analysis
+  gs1 <- mygs
+  gs1 <- gs1[which(gs1$gene %in% bg), ]
+  terms <- names(which(table(gs1$term) > 5))
+  gs1 <- gs1[gs1$term %in% terms, ]
+  
+  options(enrichment_force_universe = TRUE)
+  
+  # Run enrichment analysis
+  ora <- as.data.frame(enricher(gene = fg,
+                                universe = bg, minGSSize = 5, maxGSSize = 500000, TERM2GENE = gs1,
+                                pAdjustMethod = "fdr", pvalueCutoff = 1, qvalueCutoff = 1))
+  
+  # Check if 'ora' is empty (no enriched terms)
+  if (nrow(ora) == 0) {
+    # If 'ora' is empty, assign an empty data frame
+    first_louvain_ora_dict[[key]] <- list()
+  } else {
+    # Proceed with processing if 'ora' has results
+    gr <- as.numeric(sapply(strsplit(ora$GeneRatio, "/"), "[[", 1)) /
+      as.numeric(sapply(strsplit(ora$GeneRatio, "/"), "[[", 2))
+    
+    br <- as.numeric(sapply(strsplit(ora$BgRatio, "/"), "[[", 1)) /
+      as.numeric(sapply(strsplit(ora$BgRatio, "/"), "[[", 2))
+    
+    ora$ES <- gr / br
+    ora2_full <- ora
+    
+    ora$ID = ora$geneID = ora$p.adjust = ora$Count = NULL
+    colnames(ora) <- gsub("qvalue", "FDR", colnames(ora))
+    colnames(ora) <- gsub("GeneRatio", "FgRatio", colnames(ora))
+    ora <- ora[, c("Description", "FgRatio", "BgRatio", "ES", "pvalue", "FDR")]
+    
+    # proper FDR correction
+    nsets <- length(which(table(gs1$term) > 5))
+    nres <- nrow(ora)
+    diff <- nsets - nres
+    pvals <- c(ora$pvalue, rep(1, diff))
+    ora$FDR <- p.adjust(pvals, method = "fdr")[1:nrow(ora)]
+    ora$ES <- signif(ora$ES, 3)
+    ora$pvalue <- signif(ora$pvalue, 3)
+    ora$FDR <- signif(ora$FDR, 3)
+    
+    # Save the result in the dictionary
+    first_louvain_ora_dict[[key]] <- ora
+  }
+}
+
+
+```
+
+```{r}
+# Save the result
+write_json(first_louvain_ora_dict, path = "output/Communities/Louvain/first_louvain_ora_reactome_dict.json")
+```
+
+
+
+
+
+```{r}
+library(jsonlite)
+library(clusterProfiler)
+
+# Read the list from the text file
+GO_background <- readLines("input/Libraries/genetic_background.txt")
+
+# Read the JSON file into an R object
+second_louvain_cluster_genes <- fromJSON("output/Communities/Louvain/second_louvain_cluster_genes.json")
+
+# Initialize variables (ensure fg and bg are defined)
+bg <- GO_background  # Background gene list
+
+# Gene Ontology and minimum set size
+genesetlibrary <- "Reactome Pathways"
+minsetsize <- 5
+
+# Read the gs.Rds file
+gs <- readRDS("input/Libraries/gs.Rds")
+mygs <- gs[["Reactome Pathways"]]
+
+# Initialize an empty dictionary to store results
+second_louvain_cluster_ora_dict <- list()
+
+# Loop over each key in first_louvain_cluster_genes
+for (key in names(second_louvain_cluster_genes)) {
+  
+  # Get the gene list for the current key
+  fg <- second_louvain_cluster_genes[[key]]  # Foreground gene list
+  
+  # Prepare the gene set for enrichment analysis
+  gs1 <- mygs
+  gs1 <- gs1[which(gs1$gene %in% bg), ]
+  terms <- names(which(table(gs1$term) > 5))
+  gs1 <- gs1[gs1$term %in% terms, ]
+  
+  options(enrichment_force_universe = TRUE)
+  
+  # Run enrichment analysis
+  ora <- as.data.frame(enricher(gene = fg,
+                                universe = bg, minGSSize = 5, maxGSSize = 500000, TERM2GENE = gs1,
+                                pAdjustMethod = "fdr", pvalueCutoff = 1, qvalueCutoff = 1))
+  
+  # Check if 'ora' is empty (no enriched terms)
+  if (nrow(ora) == 0) {
+    # If 'ora' is empty, assign an empty data frame
+    second_louvain_cluster_ora_dict[[key]] <- list()
+  } else {
+    # Proceed with processing if 'ora' has results
+    gr <- as.numeric(sapply(strsplit(ora$GeneRatio, "/"), "[[", 1)) /
+      as.numeric(sapply(strsplit(ora$GeneRatio, "/"), "[[", 2))
+    
+    br <- as.numeric(sapply(strsplit(ora$BgRatio, "/"), "[[", 1)) /
+      as.numeric(sapply(strsplit(ora$BgRatio, "/"), "[[", 2))
+    
+    ora$ES <- gr / br
+    ora2_full <- ora
+    
+    ora$ID = ora$geneID = ora$p.adjust = ora$Count = NULL
+    colnames(ora) <- gsub("qvalue", "FDR", colnames(ora))
+    colnames(ora) <- gsub("GeneRatio", "FgRatio", colnames(ora))
+    ora <- ora[, c("Description", "FgRatio", "BgRatio", "ES", "pvalue", "FDR")]
+    
+    # proper FDR correction
+    nsets <- length(which(table(gs1$term) > 5))
+    nres <- nrow(ora)
+    diff <- nsets - nres
+    pvals <- c(ora$pvalue, rep(1, diff))
+    ora$FDR <- p.adjust(pvals, method = "fdr")[1:nrow(ora)]
+    ora$ES <- signif(ora$ES, 3)
+    ora$pvalue <- signif(ora$pvalue, 3)
+    ora$FDR <- signif(ora$FDR, 3)
+    
+    # Save the result in the dictionary
+    second_louvain_cluster_ora_dict[[key]] <- ora
+  }
+}
+
+
+```
+
+```{r}
+# Save the result 
+write_json(second_louvain_cluster_ora_dict, path = "output/Communities/Louvain/second_louvain_cluster_ora_reactome_dict.json")
+```
+
+
+
+
+
+```{r}
+library(jsonlite)
+library(clusterProfiler)
+
+# Read the list from the text file
+GO_background <- readLines("input/Libraries/genetic_background.txt")
+
+# Read the JSON file into an R object
+third_louvain_cluster_genes <- fromJSON("output/Communities/Louvain/third_louvain_cluster_genes.json")
+
+# Initialize variables (ensure fg and bg are defined)
+bg <- GO_background  # Background gene list
+
+# Gene Ontology and minimum set size
+genesetlibrary <- "Reactome Pathways"
+minsetsize <- 5
+
+# Read the gs.Rds file
+gs <- readRDS("input/Libraries/gs.Rds")
+mygs <- gs[["Reactome Pathways"]]
+
+# Initialize an empty dictionary to store results
+third_louvain_cluster_ora_dict <- list()
+
+# Loop over each key in third_louvain_cluster_genes
+for (key in names(third_louvain_cluster_genes)) {
+  
+  # Get the gene list for the current key
+  fg <- third_louvain_cluster_genes[[key]]  # Foreground gene list
+  
+  # Prepare the gene set for enrichment analysis
+  gs1 <- mygs
+  gs1 <- gs1[which(gs1$gene %in% bg), ]
+  terms <- names(which(table(gs1$term) > 5))
+  gs1 <- gs1[gs1$term %in% terms, ]
+  
+  options(enrichment_force_universe = TRUE)
+  
+  # Run enrichment analysis
+  ora <- as.data.frame(enricher(gene = fg,
+                                universe = bg, minGSSize = 5, maxGSSize = 500000, TERM2GENE = gs1,
+                                pAdjustMethod = "fdr", pvalueCutoff = 1, qvalueCutoff = 1))
+  
+  # Check if 'ora' is empty (no enriched terms)
+  if (nrow(ora) == 0) {
+    # If 'ora' is empty, assign an empty data frame
+    third_louvain_cluster_ora_dict[[key]] <- list()
+  } else {
+    # Proceed with processing if 'ora' has results
+    gr <- as.numeric(sapply(strsplit(ora$GeneRatio, "/"), "[[", 1)) /
+      as.numeric(sapply(strsplit(ora$GeneRatio, "/"), "[[", 2))
+    
+    br <- as.numeric(sapply(strsplit(ora$BgRatio, "/"), "[[", 1)) /
+      as.numeric(sapply(strsplit(ora$BgRatio, "/"), "[[", 2))
+    
+    ora$ES <- gr / br
+    ora2_full <- ora
+    
+    ora$ID = ora$geneID = ora$p.adjust = ora$Count = NULL
+    colnames(ora) <- gsub("qvalue", "FDR", colnames(ora))
+    colnames(ora) <- gsub("GeneRatio", "FgRatio", colnames(ora))
+    ora <- ora[, c("Description", "FgRatio", "BgRatio", "ES", "pvalue", "FDR")]
+    
+    # proper FDR correction
+    nsets <- length(which(table(gs1$term) > 5))
+    nres <- nrow(ora)
+    diff <- nsets - nres
+    pvals <- c(ora$pvalue, rep(1, diff))
+    ora$FDR <- p.adjust(pvals, method = "fdr")[1:nrow(ora)]
+    ora$ES <- signif(ora$ES, 3)
+    ora$pvalue <- signif(ora$pvalue, 3)
+    ora$FDR <- signif(ora$FDR, 3)
+    
+    # Save the result in the dictionary
+    third_louvain_cluster_ora_dict[[key]] <- ora
+  }
+}
+
+
+```
+
+```{r}
+# Save the result
+write_json(third_louvain_cluster_ora_dict, path = "output/Communities/Louvain/third_louvain_cluster_ora_reactome_dict.json")
+```
